@@ -1,6 +1,6 @@
 from sqlalchemy import Column, Integer, String, Text, ForeignKey, Table
 from sqlalchemy.orm import relationship, Mapped, mapped_column
-from database import Base
+from models.database import Base
 map_area_event_association = Table(
     "map_area_event_association",
     Base.metadata,

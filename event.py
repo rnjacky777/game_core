@@ -1,6 +1,6 @@
 from sqlalchemy import Column, Integer, String, Text, ForeignKey, text
 from sqlalchemy.orm import relationship, Mapped, mapped_column
-from database import Base
+from models.database import Base
 
 
 class Event(Base):

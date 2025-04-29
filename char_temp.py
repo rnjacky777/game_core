@@ -1,6 +1,6 @@
 from sqlalchemy import String, Integer
 from sqlalchemy.orm import relationship, Mapped, mapped_column
-from database import Base
+from models.database import Base
 from models.user import UserChar
 
 
