@@ -1,6 +1,11 @@
+from __future__ import annotations
+from typing import TYPE_CHECKING, List
 from sqlalchemy import Column, Integer, String, Text, ForeignKey, text
 from sqlalchemy.orm import relationship, Mapped, mapped_column
 from models.database import Base
+
+if TYPE_CHECKING:
+    from models import RewardPoolItem 
 
 
 class Event(Base):
@@ -41,7 +46,7 @@ class RewardPool(Base):
     name = Column(String, nullable=False)
 
     # 關聯到 pool_items
-    items = relationship(
+    items: Mapped[List["RewardPoolItem"]] = relationship( # type: ignore
         "RewardPoolItem", back_populates="pool", cascade="all, delete-orphan")
     monsters = relationship(
         "Monster", back_populates="drop_pool")  # 哪些怪物使用這個 pool
@@ -70,3 +75,4 @@ class BattleEventLogic(Base):
     reward_pool_id = Column(Integer, ForeignKey('reward_pools.id'))
 
     event = relationship("Event", backref="battle_logic")
+

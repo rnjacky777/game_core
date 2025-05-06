@@ -16,7 +16,9 @@ class User(Base):
 
     # Package
     money: Mapped[int] = mapped_column(default=0)
-    current_progress_id = Column(Integer, ForeignKey('user_map_progress.id'))
+    current_map_id: Mapped[int] = mapped_column(ForeignKey("maps.id"), nullable=False, default=1)
+    current_map = relationship("Map")  # 若你有 Map model 的話
+
     current_progress = relationship("UserMapProgress", uselist=False)
     # 一支隊伍的六個成員（或少於六個）
     team_members: Mapped[list["UserTeamMember"]] = relationship(

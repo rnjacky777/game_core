@@ -47,7 +47,7 @@ class UserMapProgress(Base):
     __tablename__ = "user_map_progress"
 
     id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
-    # user_id: Mapped[int] = mapped_column(ForeignKey("users.id")) Skip
+    user_id: Mapped[int] = mapped_column(ForeignKey("users.id"))
     map_id: Mapped[int] = mapped_column(ForeignKey("maps.id"))
 
     # 進度數值可以是百分比、已完成事件數等

@@ -1,15 +1,21 @@
+from __future__ import annotations
+from typing import TYPE_CHECKING, Optional
 from sqlalchemy import Column, Integer, String, ForeignKey, Float
-from sqlalchemy.orm import relationship
+from sqlalchemy.orm import relationship,Mapped
 from models.database import Base
 
+if TYPE_CHECKING:
+    from models.event import RewardPool
 
 class Monster(Base):
     __tablename__ = 'monsters'
     # Add more detail
     id = Column(Integer, primary_key=True)
     name = Column(String)
-    drop_pool_id = Column(Integer, ForeignKey('reward_pools.id'))
-    drop_pool = relationship("RewardPool", back_populates="monsters")
+
+    # Connect to RewardPool
+    drop_pool_id = Column(Integer, ForeignKey('reward_pools.id'), nullable=True)
+    drop_pool:Mapped[Optional["RewardPool"]] = relationship("RewardPool", back_populates="monsters") # type: ignore
 
 
 class MonsterPool(Base):

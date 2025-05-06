@@ -1,3 +1,4 @@
+from __future__ import annotations
 from sqlalchemy import Column, Integer, String, ForeignKey, Float
 from sqlalchemy.orm import relationship, Mapped, mapped_column
 from models.database import Base
@@ -39,4 +40,5 @@ class RewardPoolItem(Base):
     probability = Column(Float, nullable=False)  # 0.0 ~ 1.0
 
     pool = relationship("RewardPool", back_populates="items")
-    item = relationship("Item")
+    item_detail:Mapped["Item"] = relationship("Item")
+
