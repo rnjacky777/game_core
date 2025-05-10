@@ -13,6 +13,7 @@ class Monster(Base):
     # Add more detail
     id = Column(Integer, primary_key=True)
     name = Column(String)
+    description = Column(String, nullable=True)
 
     # attribute
     hp = Column(Integer, nullable=False, default=1)

@@ -43,7 +43,7 @@ class EventResult(Base):
 class RewardPool(Base):
     __tablename__ = 'reward_pools'
     id = Column(Integer, primary_key=True)
-    name = Column(String, nullable=False)
+    name = Column(String, nullable=True)
 
     # 關聯到 pool_items
     items: Mapped[List["RewardPoolItem"]] = relationship( # type: ignore
