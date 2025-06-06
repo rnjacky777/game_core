@@ -1,6 +1,6 @@
 from __future__ import annotations
 import json
-from typing import TYPE_CHECKING, List
+from typing import TYPE_CHECKING, List, Optional
 from pydantic import BaseModel
 from sqlalchemy import Column, Integer, String, Text, ForeignKey, text
 from sqlalchemy.orm import relationship, Mapped, mapped_column
@@ -39,24 +39,52 @@ class Event(Base):
         secondary="map_area_event_association",
         back_populates="events"
     )
+    # typing
+    general_logic: Mapped[Optional["GeneralEventLogic"]] = relationship(
+        "GeneralEventLogic", back_populates="event", uselist=False
+    )
     # 其他欄位如事件劇情、條件、結果等在這邊擴充
 
 
 class EventResult(Base):
     __tablename__ = 'event_results'
     id = Column(Integer, primary_key=True, index=True)
-    name = Column(Text, nullable=False, server_default=text("No name"))
-    reward_pool_id = Column(Integer, ForeignKey('reward_pools.id'))
+    name = Column(Text, nullable=False, default=text("No name"))
+
+    condition_json = Column(Text, nullable=True, default="[]")
+    prior = Column(Integer, nullable=True, default=0)
     # e.g., {"poison": 3, "heal": 100}
     status_effects_json = Column(Text, nullable=True)
-    story_text = Column(Text)
-    reward_pool = relationship("RewardPool", back_populates="event_results")
+    story_text = Column(Text, nullable=True, default="[]")
+
+    reward_pool_id = Column(Integer, ForeignKey('reward_pools.id'))
+    reward_pool = relationship(
+        "RewardPool",
+        back_populates="event_results",
+        # foreign_keys=[reward_pool_id],
+        cascade="all, delete-orphan",
+        single_parent=True
+    )
+
+    general_event_logic_id = Column(
+        Integer,
+        ForeignKey('general_event_logic.id', ondelete="CASCADE"),
+        nullable=True
+    )
+    general_event_logic = relationship("GeneralEventLogic",
+                                       back_populates="event_results")
 
     def get_story_text(self) -> list[StoryTextData]:
         return [StoryTextData(**item) for item in json.loads(self.story_text)]
 
     def set_story_text(self, data: list[StoryTextData]):
         self.story_text = json.dumps([item.model_dump() for item in data])
+
+    def get_condition_list(self) -> dict:
+        return json.loads(self.condition_json)
+
+    def set_condition_list(self, data: List[dict]):
+        self.condition_json = json.dumps(data, ensure_ascii=False)
 
 
 class RewardPool(Base):
@@ -69,6 +97,7 @@ class RewardPool(Base):
         "RewardPoolItem", back_populates="pool", cascade="all, delete-orphan")
     monsters = relationship(
         "Monster", back_populates="drop_pool")  # 哪些怪物使用這個 pool
+
     event_results = relationship(
         "EventResult", back_populates="reward_pool")  # 哪些事件結果使用這個 pool
 
@@ -76,29 +105,24 @@ class RewardPool(Base):
 class GeneralEventLogic(Base):
     __tablename__ = 'general_event_logic'
     id = Column(Integer, primary_key=True)
-    event_id = Column(Integer, ForeignKey('events.id'))
-    story_text = Column(Text)  # 可為 JSON 字串，支援多段落
-    condition_json = Column(Text)  # TODO 未來補上 儲存條件，例如 {"has_item": "torch"}
+    event_id = Column(Integer, ForeignKey('events.id'), unique=True)
+    story_text = Column(Text, default="[]")  # 可為 JSON 字串，支援多段落
+    # TODO 未來補上 儲存條件，例如 {"has_item": "torch"}
 
-    event = relationship("Event", backref="general_logic")
-
-    def get_condition_list(self) -> list[ConditionData]:
-        return [ConditionData(**item) for item in json.loads(self.story_text)]
-
-    def set_condition_list(self, data: list[ConditionData]):
-        self.condition_json = json.dumps([item.model_dump() for item in data])
+    event: Mapped["Event"] = relationship(
+        "Event",
+        uselist=False,
+        back_populates="general_logic"
+    )
+    event_results = relationship("EventResult",
+                                 back_populates="general_event_logic",
+                                 cascade="all, delete-orphan")
 
     def get_story_text(self) -> list[StoryTextData]:
         return [StoryTextData(**item) for item in json.loads(self.story_text)]
 
     def set_story_text(self, data: list[StoryTextData]):
         self.story_text = json.dumps([item.model_dump() for item in data])
-
-
-class ConditionData(BaseModel):
-    result_id: int
-    condition: list[dict] = []
-    prior: int
 
 
 class StoryTextData(BaseModel):
