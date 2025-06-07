@@ -34,6 +34,12 @@ def edit_event_service(db: Session, event_id: int, story_text: list[StoryTextDat
 def get_event_by_event_id(db: Session, event_id: int) -> Event:
     event = db.query(Event).filter(Event.id == event_id).first()
     return event
+
+def delete_event(db: Session, event_id: int):
+    event = db.query(Event).filter(Event.id == event_id).first()
+    db.delete(event)
+    db.commit()
+    return
 # endregion
 
 
@@ -46,8 +52,7 @@ def edit_general_logic(db: Session, general_logic: GeneralEventLogic, story_text
 
 def create_general_logic(db: Session, event_id: int):
     general_logic = GeneralEventLogic(event_id=event_id,
-                                      story_text="[]",
-                                      condition_json="[]")
+                                      story_text="[]")
     db.add(general_logic)
     db.commit()
     db.flush(general_logic)
@@ -84,4 +89,10 @@ def edit_event_result_service(db: Session, event_result_id: int, prior: int, sto
         event_result.set_condition_list(condition)
     db.commit()
     return event_result
+
+def delete_event_result(db: Session, result_id: int):
+    event_result = db.query(EventResult).filter(EventResult.id == result_id).first()
+    db.delete(event_result)
+    db.commit()
+    return
 # endregion
