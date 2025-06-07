@@ -58,7 +58,7 @@ class EventResult(Base):
     story_text = Column(Text, nullable=True, default="[]")
 
     reward_pool_id = Column(Integer, ForeignKey('reward_pools.id'))
-    reward_pool = relationship(
+    reward_pool:Mapped["RewardPool"] = relationship(
         "RewardPool",
         back_populates="event_results",
         # foreign_keys=[reward_pool_id],
@@ -114,7 +114,7 @@ class GeneralEventLogic(Base):
         uselist=False,
         back_populates="general_logic"
     )
-    event_results = relationship("EventResult",
+    event_results:Mapped[List["EventResult"]] = relationship("EventResult",
                                  back_populates="general_event_logic",
                                  cascade="all, delete-orphan")
 
@@ -126,7 +126,7 @@ class GeneralEventLogic(Base):
 
 
 class StoryTextData(BaseModel):
-    name: str = None
+    name: Optional[str] = None
     text: str
 
 
