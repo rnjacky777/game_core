@@ -3,7 +3,7 @@
 from fastapi import HTTPException
 from sqlalchemy.orm import Session
 from typing import Optional
-from models import Monster
+from core_system.models import Monster
 
 
 def fetch_monsters(

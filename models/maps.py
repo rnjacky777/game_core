@@ -2,8 +2,8 @@
 
 from sqlalchemy import JSON, Column, Integer, String, Text, ForeignKey, Table
 from sqlalchemy.orm import relationship, Mapped, mapped_column
-from models.database import Base
-from models.association_tables import map_connection
+from core_system.models.database import Base
+from core_system.models.association_tables import map_connection
 # 多地圖連結
 
 

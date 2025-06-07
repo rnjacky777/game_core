@@ -2,7 +2,7 @@
 
 from sqlalchemy import Column, Integer, String, Text, ForeignKey, Table,Boolean
 from sqlalchemy.orm import relationship, Mapped, mapped_column
-from models.database import Base
+from core_system.models.database import Base
 
 
 class NPC(Base):

@@ -4,10 +4,10 @@ from typing import TYPE_CHECKING, List, Optional
 from pydantic import BaseModel
 from sqlalchemy import Column, Integer, String, Text, ForeignKey, text
 from sqlalchemy.orm import relationship, Mapped, mapped_column
-from models.database import Base
+from core_system.models.database import Base
 
 if TYPE_CHECKING:
-    from models import RewardPoolItem
+    from core_system.models import RewardPoolItem
 
 
 '''

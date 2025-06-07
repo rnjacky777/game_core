@@ -1,5 +1,5 @@
 from sqlalchemy import Column, Integer, String
-from models.database import Base
+from core_system.models.database import Base
 
 
 class Admin(Base):

@@ -3,7 +3,7 @@
 from fastapi import HTTPException
 from sqlalchemy.orm import Session
 from typing import Optional
-from models import RewardPool
+from core_system.models import RewardPool
 
 
 def add_reward_pool(db: Session,name:str):

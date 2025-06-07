@@ -2,10 +2,10 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, Optional
 from sqlalchemy import Column, Integer, String, ForeignKey, Float
 from sqlalchemy.orm import relationship, Mapped, mapped_column
-from models.database import Base
+from core_system.models.database import Base
 
 if TYPE_CHECKING:
-    from models.event import RewardPool
+    from core_system.models.event import RewardPool
 
 
 class Monster(Base):

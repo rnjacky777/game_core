@@ -1,5 +1,5 @@
 from sqlalchemy.orm import Session
-from models.bo_admin import Admin
+from core_system.models.bo_admin import Admin
 from util.auth import verify_password, create_access_token
 from datetime import timedelta
 

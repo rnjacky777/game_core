@@ -1,7 +1,7 @@
 from sqlalchemy import String, Integer
 from sqlalchemy.orm import relationship, Mapped, mapped_column
-from models.database import Base
-from models.user import UserChar
+from core_system.models.database import Base
+from core_system.models.user import UserChar
 
 
 class CharTemp(Base):

@@ -1,5 +1,5 @@
 from sqlalchemy.orm import Session
-from models.event import Event, GeneralEventLogic, EventResult, StoryTextData
+from core_system.models.event import Event, GeneralEventLogic, EventResult, StoryTextData
 
 
 # region event service
