@@ -54,11 +54,11 @@ class EventResult(Base):
     condition_json = Column(Text, nullable=True, default="[]")
     prior = Column(Integer, nullable=True, default=0)
     # e.g., {"poison": 3, "heal": 100}
-    status_effects_json = Column(Text, nullable=True)
+    status_effects_json = Column(Text, nullable=True, default="[]")
     story_text = Column(Text, nullable=True, default="[]")
 
     reward_pool_id = Column(Integer, ForeignKey('reward_pools.id'))
-    reward_pool:Mapped["RewardPool"] = relationship(
+    reward_pool: Mapped["RewardPool"] = relationship(
         "RewardPool",
         back_populates="event_results",
         # foreign_keys=[reward_pool_id],
@@ -80,11 +80,19 @@ class EventResult(Base):
     def set_story_text(self, data: list[StoryTextData]):
         self.story_text = json.dumps([item.model_dump() for item in data])
 
-    def get_condition_list(self) -> dict:
-        return json.loads(self.condition_json)
+    def get_condition_list(self) -> List[ConditionData]:
+        return [ConditionData(**condition) for condition in json.loads(self.condition_json)]
 
-    def set_condition_list(self, data: List[dict]):
-        self.condition_json = json.dumps(data, ensure_ascii=False)
+    def set_condition_list(self, data: List[ConditionData]):
+        self.condition_json = json.dumps(
+            [condition.model_dump() for condition in data])
+
+    def get_status_effects_json(self) -> List[StatusEffectData]:
+        return [StatusEffectData(**status_effect) for status_effect in json.loads(self.status_effects_json)]
+
+    def set_status_effects_json(self, data: List[StatusEffectData]):
+        self.status_effects_json = json.dumps(
+            [status.model_dump() for status in data])
 
 
 class RewardPool(Base):
@@ -114,9 +122,9 @@ class GeneralEventLogic(Base):
         uselist=False,
         back_populates="general_logic"
     )
-    event_results:Mapped[List["EventResult"]] = relationship("EventResult",
-                                 back_populates="general_event_logic",
-                                 cascade="all, delete-orphan")
+    event_results: Mapped[List["EventResult"]] = relationship("EventResult",
+                                                              back_populates="general_event_logic",
+                                                              cascade="all, delete-orphan")
 
     def get_story_text(self) -> list[StoryTextData]:
         return [StoryTextData(**item) for item in json.loads(self.story_text)]
@@ -128,6 +136,16 @@ class GeneralEventLogic(Base):
 class StoryTextData(BaseModel):
     name: Optional[str] = None
     text: str
+
+
+class ConditionData(BaseModel):
+    condition_key: Optional[str] = None
+    condition_value: Optional[str] = None
+
+
+class StatusEffectData(BaseModel):
+    status_effect_key: Optional[str] = None
+    status_effect_value: Optional[str] = None
 
 
 class BattleEventLogic(Base):

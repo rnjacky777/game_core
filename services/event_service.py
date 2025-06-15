@@ -1,8 +1,36 @@
+import logging
+from typing import Optional
 from sqlalchemy.orm import Session
 from core_system.models.event import Event, GeneralEventLogic, EventResult, StoryTextData
 
 
 # region event service
+def fetch_events(
+    db: Session,
+    started_id: Optional[int],
+    limit: int,
+    direction: str = "next"
+):
+    query = db.query(Event)
+
+    if started_id is not None:
+        if direction == "next":
+            query = query.filter(Event.id > started_id)
+            query = query.order_by(Event.id.asc())
+        else:
+            query = query.filter(Event.id < started_id)
+            query = query.order_by(Event.id.desc())
+    else:
+        query = query.order_by(Event.id.asc())
+
+    events = query.limit(limit).all()
+
+    if direction == "prev":
+        events.reverse()
+
+    return events
+
+
 def create_event_service(db: Session, name: str, event_type: str, description: str = None):
     event = Event(name=name,
                   type=event_type,
@@ -12,14 +40,18 @@ def create_event_service(db: Session, name: str, event_type: str, description: s
     return event
 
 
-def edit_event_service(db: Session, event_id: int, story_text: list[StoryTextData], description: str) -> Event:
+def edit_event_service(db: Session, event_id: int,
+                       story_text: list[StoryTextData],
+                       description: str,
+                       name: str) -> Event:
     event = db.query(Event).filter_by(id=event_id).first()
     if not event:
         raise ValueError(f"Event with id {event_id} not found.")
 
     if description is not None:
         event.description = description
-
+    if name is not None:
+        event.name = name
     if story_text is not None:
         if event.general_logic is None:
             raise ValueError(
@@ -34,6 +66,7 @@ def edit_event_service(db: Session, event_id: int, story_text: list[StoryTextDat
 def get_event_by_event_id(db: Session, event_id: int) -> Event:
     event = db.query(Event).filter(Event.id == event_id).first()
     return event
+
 
 def delete_event(db: Session, event_id: int):
     event = db.query(Event).filter(Event.id == event_id).first()
@@ -78,20 +111,28 @@ def create_event_result_service(db: Session, name: str, general_event_logic_id: 
     return event_result
 
 
-def edit_event_result_service(db: Session, event_result_id: int, prior: int, story_text: list[StoryTextData], condition: list[dict]):
+def edit_event_result_service(db: Session,name:str, event_result_id: int, prior: int, story_text: list[StoryTextData], condition: list[dict], status_effects_json: list[dict]):
+    logging.info(f"Check go to edit_event_result_service")
     event_result = db.query(EventResult).filter(
         EventResult.id == event_result_id).first()
+    if name:
+        event_result.name = name
     if story_text:
+        logging.info(f"Check: {story_text}")
         event_result.set_story_text(story_text)
     if prior:
         event_result.prior = prior
     if condition:
         event_result.set_condition_list(condition)
+    if status_effects_json:
+        event_result.set_status_effects_json(status_effects_json)
     db.commit()
     return event_result
 
+
 def delete_event_result(db: Session, result_id: int):
-    event_result = db.query(EventResult).filter(EventResult.id == result_id).first()
+    event_result = db.query(EventResult).filter(
+        EventResult.id == result_id).first()
     db.delete(event_result)
     db.commit()
     return

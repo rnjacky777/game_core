@@ -39,3 +39,10 @@ def remove_reward_pool_item(db: Session, pool_id: int, item_id: int):
     db.delete(remove_pool_item)
     db.commit()
     return
+
+
+def edit_reward_pool_item(db: Session, pool_id: int, item_id: int,probability:float):
+    remove_pool_item = db.query(RewardPoolItem).filter(RewardPoolItem.pool_id == pool_id and RewardPoolItem.item_id==item_id).first()
+    remove_pool_item.probability = probability
+    db.commit()
+    return
