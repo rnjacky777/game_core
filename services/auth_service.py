@@ -19,3 +19,5 @@ def authenticate_user(db: Session, username: str, password: str) -> str:
         expires_delta=timedelta(minutes=30)
     )
     return token
+
+

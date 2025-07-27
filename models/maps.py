@@ -4,6 +4,7 @@ from sqlalchemy import JSON, Column, Integer, String, Text, ForeignKey, Table
 from sqlalchemy.orm import relationship, Mapped, mapped_column
 from core_system.models.database import Base
 from core_system.models.association_tables import map_connection
+from core_system.models.user import UserData
 # 多地圖連結
 
 
@@ -47,7 +48,7 @@ class UserMapProgress(Base):
     __tablename__ = "user_map_progress"
 
     id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
-    user_id: Mapped[int] = mapped_column(ForeignKey("users.id"))
+    user_data_id: Mapped[int] = mapped_column(ForeignKey("user_data.id"))
     map_id: Mapped[int] = mapped_column(ForeignKey("maps.id"))
 
     # 進度數值可以是百分比、已完成事件數等
@@ -55,8 +56,7 @@ class UserMapProgress(Base):
     is_completed: Mapped[bool] = mapped_column(default=False)
 
     # 關聯
-    user: Mapped["User"] = relationship(  # type: ignore
-        "User", back_populates="current_progress")  # type: ignore
+    user_data: Mapped["UserData"] = relationship(back_populates="map_progresses")
     map: Mapped["Map"] = relationship("Map", back_populates="user_progresses")
 
 
