@@ -10,7 +10,7 @@ from util.auth import create_access_token, get_password_hash, verify_password
 from core_system.config import ACCESS_TOKEN_EXPIRE_MINUTES
 
 # Default values for new user creation
-DEFAULT_STARTING_CHAR_ID = 1
+DEFAULT_STARTING_CHAR_IDS = [1,2]
 DEFAULT_STARTING_MAP_ID = 1
 DEFAULT_STARTING_AREA_ID = 1
 
@@ -114,7 +114,8 @@ def create_user_with_defaults(db: Session, username: str, password: str) -> User
         logging.info(f"Step 2/3: UserData for user ID {new_user.id} (UserData ID: {new_user_data.id}) created.")
 
         # Step 3: Create the default starting character
-        create_user_char(db=db, char_id=DEFAULT_STARTING_CHAR_ID, target_user_data_id=new_user_data.id)
+        for char_id in DEFAULT_STARTING_CHAR_IDS:
+            create_user_char(db=db, char_id=char_id, target_user_data_id=new_user_data.id)
         logging.info(f"Step 3/3: Default character created for UserData ID {new_user_data.id}.")
 
         logging.info(f"Successfully prepared user '{username}' for creation.")
