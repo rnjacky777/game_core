@@ -15,7 +15,7 @@ def authenticate_user(db: Session, username: str, password: str) -> str:
         raise AuthenticationError("Invalid username or password")
 
     token = create_access_token(
-        data={"sub": user.id},
+        data={"sub": str(user.id)},
         expires_delta=timedelta(minutes=30)
     )
     return token

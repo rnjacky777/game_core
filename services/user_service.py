@@ -7,6 +7,7 @@ from sqlalchemy.orm import Session
 from core_system.models.char_temp import CharTemp
 from core_system.models.user import User, UserChar, UserData, UserTeamMember
 from util.auth import create_access_token, get_password_hash, verify_password
+from core_system.config import ACCESS_TOKEN_EXPIRE_MINUTES
 
 # Default values for new user creation
 DEFAULT_STARTING_CHAR_ID = 1
@@ -24,8 +25,8 @@ def authenticate_user(db: Session, username: str, password: str) -> str:
         raise AuthenticationError("Invalid username or password")
 
     token = create_access_token(
-        data={"sub": user.id},
-        expires_delta=timedelta(minutes=30)
+        data={"sub": str(user.id)},
+        expires_delta=timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
     )
     return token
 
