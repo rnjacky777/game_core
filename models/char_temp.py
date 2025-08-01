@@ -11,8 +11,10 @@ class CharTemp(Base):
     id: Mapped[int] = mapped_column(primary_key=True)
     name: Mapped[str] = mapped_column(String(50), nullable=False)
     rarity: Mapped[int] = mapped_column(Integer, nullable=False)  # 1 ~ 6 星
-    description: Mapped[str] = mapped_column(
+    description: Mapped[str | None] = mapped_column(
         String(255), nullable=True)  # 顯示用介紹
+    image_sm_url: Mapped[str | None] = mapped_column(String(255), nullable=True)  # 角色小圖 URL
+    image_lg_url: Mapped[str | None] = mapped_column(String(255), nullable=True)  # 角色大圖 URL
 
     # Base status
     base_hp: Mapped[int] = mapped_column(Integer, nullable=False)
