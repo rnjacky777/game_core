@@ -1,10 +1,32 @@
-from sqlite3 import IntegrityError
+from dataclasses import dataclass
 from typing import List, Literal, Optional, Tuple
+
 from sqlalchemy.orm import Session, selectinload
+from sqlalchemy.exc import IntegrityError
+
 from core_system.models.event import Event
 from core_system.models.maps import Map
 from core_system.models.association_tables import MapConnection, MapEventAssociation
 from schemas.map import CreateMapData
+
+
+# ---------------------- DTOs / Helpers ----------------------
+
+
+@dataclass
+class EventAssociationDTO:
+    event_id: int
+    event_name: str
+    probability: float
+
+
+@dataclass
+class CreatedMapInfoDTO:
+    id: int
+    name: str
+
+
+# ---------------------- Map Basic ----------------------
 
 
 def patch_map_basic_service(
@@ -14,6 +36,10 @@ def patch_map_basic_service(
     description: Optional[str] = None,
     image_url: Optional[str] = None,
 ) -> Map:
+    """
+    更新 Map 的基本屬性（name / description / image_url），
+    若找不到地圖會拋 ValueError。
+    """
     map_obj = db.get(Map, map_id)
     if not map_obj:
         raise ValueError("Map not found")
@@ -35,20 +61,19 @@ def patch_map_basic_service(
     return map_obj
 
 
-class EventAssociationDTO:
-    def __init__(self, event_id: int, event_name: str, probability: float):
-        self.event_id = event_id
-        self.event_name = event_name
-        self.probability = probability
+# ---------------------- Event Associations ----------------------
 
 
 def update_map_event_associations(
     db: Session,
     map_id: int,
-    upsert: List[dict] | None = None,  # each dict has event_id and probability
-    remove: List[int] | None = None,
+    upsert: Optional[List[dict]] = None,  # each dict must have 'event_id' and 'probability'
+    remove: Optional[List[int]] = None,
     normalize: bool = False,
 ) -> List[EventAssociationDTO]:
+    """
+    Upsert / remove event associations for a map. 可選擇正規化機率總和。
+    """
     map_obj = db.get(Map, map_id)
     if not map_obj:
         raise ValueError("Map not found")
@@ -61,6 +86,7 @@ def update_map_event_associations(
             event_obj = db.get(Event, event_id)
             if not event_obj:
                 raise ValueError(f"Event id {event_id} does not exist")
+
             existing = (
                 db.query(MapEventAssociation)
                 .filter_by(map_id=map_obj.id, event_id=event_id)
@@ -87,7 +113,7 @@ def update_map_event_associations(
             if assoc:
                 db.delete(assoc)
 
-    # Normalize
+    # Normalize total probability to 1 if requested
     if normalize:
         assocs = (
             db.query(MapEventAssociation)
@@ -107,17 +133,17 @@ def update_map_event_associations(
 
     db.refresh(map_obj)
 
-    result = []
-    for assoc in map_obj.event_associations:
-        event_obj = assoc.event
-        result.append(
-            EventAssociationDTO(
-                event_id=event_obj.id,
-                event_name=event_obj.name,
-                probability=assoc.probability,
-            )
+    return [
+        EventAssociationDTO(
+            event_id=assoc.event.id,
+            event_name=assoc.event.name,
+            probability=assoc.probability,
         )
-    return result
+        for assoc in map_obj.event_associations
+    ]
+
+
+# ---------------------- Cursor-based Fetch ----------------------
 
 
 def fetch_maps(
@@ -129,7 +155,8 @@ def fetch_maps(
     """
     Cursor-based 分頁邏輯。
     回傳：maps（最多 limit 筆）、next_cursor、prev_cursor、has_more（是否還有更多）。
-    direction="next" 表示從 cursor_id 之後往前抓（升冪）；"prev" 表示從 cursor_id 之前往回抓（降冪但最後會反向回傳正序）。
+    direction="next" 表示從 cursor_id 之後往前抓（升冪）；
+    direction="prev" 表示從 cursor_id 之前往回抓（降冪但最後會反向回傳正序）。
     """
     query = db.query(Map)
 
@@ -156,13 +183,19 @@ def fetch_maps(
     return results, next_cursor, prev_cursor, has_more
 
 
+# ---------------------- Get Single Map with Eager Loading ----------------------
+
+
 def get_map_by_id(db: Session, map_id: int) -> Optional[Map]:
-    """Retrieves a map by its ID, preloading related event and connection data."""
+    """
+    Retrieves a map by its ID, preloading related event associations and connections.
+    """
     return (
         db.query(Map)
         .options(
             selectinload(Map.event_associations).selectinload(
-                MapEventAssociation.event),
+                MapEventAssociation.event
+            ),
             selectinload(Map.connections_a).selectinload(MapConnection.map_b),
             selectinload(Map.connections_b).selectinload(MapConnection.map_a),
         )
@@ -171,10 +204,7 @@ def get_map_by_id(db: Session, map_id: int) -> Optional[Map]:
     )
 
 
-class CreatedMapInfoDTO:
-    def __init__(self, id: int, name: str):
-        self.id = id
-        self.name = name
+# ---------------------- Map Creation / Deletion ----------------------
 
 
 def create_maps_service(
@@ -182,29 +212,33 @@ def create_maps_service(
     map_datas: List[CreateMapData],
     commit: bool = True,
 ) -> List[CreatedMapInfoDTO]:
-    created = []
+    """
+    批量建立地圖，回傳已建立的簡要資訊。
+    """
+    created: List[CreatedMapInfoDTO] = []
     try:
         for md in map_datas:
-            # 你可以在這裡加額外驗證：例如名稱不能重複、長度、黑名單字、quota 限制等
             new_map = Map(
                 name=md.name,
                 description=md.description,
                 image_url=getattr(md, "image_url", None),
             )
             db.add(new_map)
-            db.flush()  # 取得 new_map.id 但不用 commit yet
+            db.flush()  # 取得 new_map.id
             created.append(CreatedMapInfoDTO(id=new_map.id, name=new_map.name))
 
         if commit:
             db.commit()
     except IntegrityError:
         db.rollback()
-        raise  # 或包成自定義 exception 讓 router 翻譯成 4xx/5xx
+        raise
     return created
 
 
 def delete_map_service(db: Session, map_id: int) -> bool:
-    """Deletes a map by its ID. Returns True if successful, False otherwise."""
+    """
+    刪除指定 map，成功回傳 True；找不到回傳 False。
+    """
     map_to_delete = db.query(Map).filter(Map.id == map_id).first()
     if not map_to_delete:
         return False
@@ -213,9 +247,23 @@ def delete_map_service(db: Session, map_id: int) -> bool:
     return True
 
 
-def upsert_connection(session: Session, map_obj: Map, neighbor: Map, **kwargs) -> MapConnection:
-    a, b = (map_obj, neighbor) if map_obj.id < neighbor.id else (
-        neighbor, map_obj)
+# ---------------------- Connections ----------------------
+
+
+def get_ordered_pair(id1: int, id2: int) -> Tuple[int, int]:
+    return (id1, id2) if id1 < id2 else (id2, id1)
+
+
+def upsert_connection(
+    session: Session,
+    map_obj: Map,
+    neighbor: Map,
+    **kwargs,
+) -> MapConnection:
+    """
+    依照 map id 排序保證無方向唯一性，upsert 連線。
+    """
+    a, b = (map_obj, neighbor) if map_obj.id < neighbor.id else (neighbor, map_obj)
     conn = (
         session.query(MapConnection)
         .filter_by(map_a_id=a.id, map_b_id=b.id)
@@ -228,10 +276,6 @@ def upsert_connection(session: Session, map_obj: Map, neighbor: Map, **kwargs) -
         for key, val in kwargs.items():
             setattr(conn, key, val)
     return conn
-
-
-def get_ordered_pair(id1: int, id2: int) -> tuple[int, int]:
-    return (id1, id2) if id1 < id2 else (id2, id1)
 
 
 def remove_connection(session: Session, map_obj: Map, neighbor: Map):
@@ -248,12 +292,11 @@ def remove_connection(session: Session, map_obj: Map, neighbor: Map):
 def patch_map_connections_service(
     db: Session,
     map_id: int,
-    # each dict: neighbor_id, is_locked, required_item, required_level
     connections: Optional[List[dict]] = None,
     remove_connections: Optional[List[int]] = None,
 ) -> Map:
     """
-    回傳更新後該 map 的所有 neighbor map 物件（含連線條件在 relationship 內）。
+    Upsert / remove 與該 map 的鄰居連線，回傳更新後的 Map（包含 connections_a/b）。
     """
     map_obj = db.get(Map, map_id)
     if not map_obj:
@@ -267,9 +310,7 @@ def patch_map_connections_service(
                 continue
             neighbor = db.get(Map, neighbor_id)
             if not neighbor:
-                raise ValueError(
-                    f"Neighbor map id {neighbor_id} does not exist")
-            # 這邊假設你有 upsert_connection helper 可直接呼
+                raise ValueError(f"Neighbor map id {neighbor_id} does not exist")
             upsert_connection(
                 db,
                 map_obj,
@@ -295,4 +336,4 @@ def patch_map_connections_service(
         raise RuntimeError("Failed to update connections") from e
 
     db.refresh(map_obj)
-    return map_obj  # caller 可以從這拿 connections_a / connections_b
+    return map_obj
