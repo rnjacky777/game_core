@@ -7,16 +7,18 @@ from sqlalchemy import and_, func, or_, select
 from sqlalchemy.orm import Session, selectinload
 
 from core_system.models.association_tables import MapAreaEventAssociation, MapEventAssociation
+# from core_system.models.event import (Event, EventResult, GeneralEventLogic,
+#                                       StoryTextData, UserEventInstance)
 from core_system.models.event import (Event, EventResult, GeneralEventLogic,
-                                      StoryTextData, UserEventInstance)
+                                      StoryTextData)
 from core_system.models.maps import Map, MapArea, UserMapProgress
 from core_system.models.user import User, UserData
-from schemas.event import (CharacterStateChange, DrawEventRequest,
-                           DrawEventResponse)
+# from schemas.event import (CharacterStateChange, DrawEventRequest,
+#                            DrawEventResponse)
 
 # NOTE: The MonsterPoolEntry model might need adjustment for the logic in draw_current_map_event
 from core_system.models.monsters import MonsterPoolEntry
-from util.random_utils import weighted_choice
+# from util.random_utils import weighted_choice
 # from .condition_service import check_conditions # 您可以取消註解此行來使用條件檢查
 
 # region event service
@@ -200,81 +202,81 @@ def delete_event_result(db: Session, result_id: int):
 
 
 # region draw event
-def draw_current_map_event(
-    db: Session,
-    user: User,
-    payload: DrawEventRequest,
-) -> DrawEventResponse:
-    # 1. 取出 user_data + current map/area 並驗證
-    user_data = db.scalar(
-        select(UserData)
-        .where(UserData.user_id == user.id)
-        .options(selectinload(UserData.current_map), selectinload(UserData.current_area))
-    )
-    if not user_data:
-        raise HTTPException(status_code=404, detail="User data missing")
-    if not user_data.current_map or not user_data.current_area:
-        raise HTTPException(status_code=400, detail="Current map/area not set")
-    if payload.map_id != user_data.current_map.id or payload.area_id != user_data.current_area.id:
-        raise HTTPException(
-            status_code=400,
-            detail="Client provided map/area doesn't match server record"
-        )
+# def draw_current_map_event(
+#     db: Session,
+#     user: User,
+#     payload: DrawEventRequest,
+# ) -> DrawEventResponse:
+#     # 1. 取出 user_data + current map/area 並驗證
+#     user_data = db.scalar(
+#         select(UserData)
+#         .where(UserData.user_id == user.id)
+#         .options(selectinload(UserData.current_map), selectinload(UserData.current_area))
+#     )
+#     if not user_data:
+#         raise HTTPException(status_code=404, detail="User data missing")
+#     if not user_data.current_map or not user_data.current_area:
+#         raise HTTPException(status_code=400, detail="Current map/area not set")
+#     if payload.map_id != user_data.current_map.id or payload.area_id != user_data.current_area.id:
+#         raise HTTPException(
+#             status_code=400,
+#             detail="Client provided map/area doesn't match server record"
+#         )
 
-    # 2. 鎖定 progress row
-    progress = db.scalar(
-        select(UserMapProgress)
-        .where(
-            and_(
-                UserMapProgress.user_data_id == user_data.id,
-                UserMapProgress.map_id == user_data.current_map.id,
-            )
-        )
-        .with_for_update()
-    )
-    if not progress:
-        progress = UserMapProgress(
-            user_data_id=user_data.id,
-            map_id=user_data.current_map.id,
-            exploration_score=0,
-        )
-        db.add(progress)
-        db.flush()
+#     # 2. 鎖定 progress row
+#     progress = db.scalar(
+#         select(UserMapProgress)
+#         .where(
+#             and_(
+#                 UserMapProgress.user_data_id == user_data.id,
+#                 UserMapProgress.map_id == user_data.current_map.id,
+#             )
+#         )
+#         .with_for_update()
+#     )
+#     if not progress:
+#         progress = UserMapProgress(
+#             user_data_id=user_data.id,
+#             map_id=user_data.current_map.id,
+#             exploration_score=0,
+#         )
+#         db.add(progress)
+#         db.flush()
 
-    # 3. 撈 map + area event pool（只 active 的）
-    # 現在回傳的是包含機率的 Association 物件
-    map_associations = get_event_associations_for_map(db, user_data.current_map.id)
-    area_associations = get_event_associations_for_area(db, user_data.current_area.id)
+#     # 3. 撈 map + area event pool（只 active 的）
+#     # 現在回傳的是包含機率的 Association 物件
+#     map_associations = get_event_associations_for_map(db, user_data.current_map.id)
+#     area_associations = get_event_associations_for_area(db, user_data.current_area.id)
 
-    all_associations = map_associations + area_associations
+#     all_associations = map_associations + area_associations
 
-    # 準備加權選擇的候選列表，格式為 (物件, 權重)
-    candidate_templates = [
-        (assoc.event, assoc.probability) for assoc in all_associations
-    ]
+#     # 準備加權選擇的候選列表，格式為 (物件, 權重)
+#     candidate_templates = [
+#         (assoc.event, assoc.probability) for assoc in all_associations
+#     ]
     
-    if not candidate_templates:
-        raise HTTPException(status_code=400, detail="No available events to draw")
+#     if not candidate_templates:
+#         raise HTTPException(status_code=400, detail="No available events to draw")
 
-    # NOTE: 在這裡您可以使用 check_conditions 過濾 candidate_templates
-    # 之後再傳遞給 weighted_choice
-    chosen_template: Event = weighted_choice(candidate_templates)
-    if not chosen_template:
-        raise HTTPException(status_code=500, detail="Failed to pick an event")
+#     # NOTE: 在這裡您可以使用 check_conditions 過濾 candidate_templates
+#     # 之後再傳遞給 weighted_choice
+#     chosen_template: Event = weighted_choice(candidate_templates)
+#     if not chosen_template:
+#         raise HTTPException(status_code=500, detail="Failed to pick an event")
 
-    if chosen_template.type == "battle":
-        result_text = "你遭遇了怪物，準備戰鬥！"
-    else:
-        pass
+#     if chosen_template.type == "battle":
+#         result_text = "你遭遇了怪物，準備戰鬥！"
+#     else:
+#         pass
 
-    # 9. 建 response
-    resp = DrawEventResponse(
-        event_type=chosen_template.type,
-        event_template_id=chosen_template.id,
-        story_text=story_text,
-        result_text=result_text,
-        character_changes=character_changes,
-        extra=event_payload,
-    )
-    return resp
+#     # 9. 建 response
+#     resp = DrawEventResponse(
+#         event_type=chosen_template.type,
+#         event_template_id=chosen_template.id,
+#         story_text=story_text,
+#         result_text=result_text,
+#         character_changes=character_changes,
+#         extra=event_payload,
+#     )
+#     return resp
 # endregion

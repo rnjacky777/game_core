@@ -1,12 +1,15 @@
 # app/models/map.py
 
-from sqlalchemy import JSON, Column, Integer, String, Text, ForeignKey, Table
+from typing import TYPE_CHECKING
+from sqlalchemy import (JSON, Column, ForeignKey, Integer, String, Table, Text)
 from sqlalchemy.orm import relationship, Mapped, mapped_column
 from core_system.models.database import Base
-from core_system.models.association_tables import map_connection
 from core_system.models.user import UserData
 # 多地圖連結
-
+if TYPE_CHECKING:
+    from .association_tables import MapConnection, MapEventAssociation
+    # The following are defined later in this file, but this helps type checkers
+    from . import MapArea, UserMapProgress
 
 class Map(Base):
     __tablename__ = "maps"
@@ -17,7 +20,7 @@ class Map(Base):
     image_url: Mapped[str] = mapped_column(String(255), nullable=True)
 
     # 透過關聯物件與 Event 建立關聯
-    event_associations: Mapped[list["MapEventAssociation"]] = relationship( # type: ignore
+    event_associations: Mapped[list["MapEventAssociation"]] = relationship(
         "MapEventAssociation", back_populates="map", cascade="all, delete-orphan"
     )
 
@@ -29,16 +32,38 @@ class Map(Base):
 
     # 小地圖
     areas: Mapped[list["MapArea"]] = relationship(
-        "MapArea", back_populates="map")
-
-    # 多個地圖的連結
-    connected_maps = relationship(
-        "Map",
-        secondary=map_connection,
-        primaryjoin=id == map_connection.c.from_map_id,
-        secondaryjoin=id == map_connection.c.to_map_id,
-        backref="connected_from"
+        "MapArea", back_populates="map"
     )
+
+    # 與 MapConnection 的雙向關聯（無方向連線）
+    connections_a: Mapped[list["MapConnection"]] = relationship(
+        "MapConnection",
+        foreign_keys="[MapConnection.map_a_id]",
+        back_populates="map_a",
+        cascade="all, delete-orphan"
+    )
+    connections_b: Mapped[list["MapConnection"]] = relationship(
+        "MapConnection",
+        foreign_keys="[MapConnection.map_b_id]",
+        back_populates="map_b",
+        cascade="all, delete-orphan"
+    )
+
+    @property
+    def neighbors(self) -> list["Map"]:
+        """所有相鄰（雙向）且不論順序的地圖"""
+        out = [conn.map_b for conn in self.connections_a]
+        inc = [conn.map_a for conn in self.connections_b]
+        return out + inc
+
+    def get_unlocked_neighbors(self) -> list["Map"]:
+        """過濾掉鎖住的連線後的鄰居"""
+        out = [conn.map_b for conn in self.connections_a if not conn.is_locked]
+        inc = [conn.map_a for conn in self.connections_b if not conn.is_locked]
+        return out + inc
+
+    def __repr__(self) -> str:
+        return f"<Map(id={self.id}, name='{self.name}')>"
 # app/models/map.py (繼續加在同一個檔案裡)
 
 
