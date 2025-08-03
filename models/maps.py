@@ -16,11 +16,9 @@ class Map(Base):
     description: Mapped[str] = mapped_column(Text, nullable=True)
     image_url: Mapped[str] = mapped_column(String(255), nullable=True)
 
-    # 與事件建立多對多關聯
-    events: Mapped[list["Event"]] = relationship(  # type: ignore
-        "Event",
-        secondary="map_event_association",
-        back_populates="maps"
+    # 透過關聯物件與 Event 建立關聯
+    event_associations: Mapped[list["MapEventAssociation"]] = relationship( # type: ignore
+        "MapEventAssociation", back_populates="map", cascade="all, delete-orphan"
     )
 
     # 每個 map 會有多個使用者進度
@@ -71,10 +69,9 @@ class MapArea(Base):
 
     # 關聯 Map 和 Event
     map = relationship("Map", back_populates="areas")
-    events = relationship(
-        "Event",  # 關聯 Event
-        secondary="map_area_event_association",  # 使用中介表
-        back_populates="areas"
+    # 透過關聯物件與 Event 建立關聯
+    event_associations: Mapped[list["MapAreaEventAssociation"]] = relationship( # type: ignore
+        "MapAreaEventAssociation", back_populates="area", cascade="all, delete-orphan"
     )
 
     # 儲存初始 NPC 資料，若未來有變動或需要擴展，可以改為關聯到 NPC 表

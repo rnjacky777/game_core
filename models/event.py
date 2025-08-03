@@ -28,16 +28,13 @@ class Event(Base):
     # "battle", "normal", "special"
     type: Mapped[str] = mapped_column(String(50))
     description: Mapped[str] = mapped_column(Text)
-
-    maps = relationship(  # type: ignore
-        "Map",
-        secondary="map_event_association",
-        back_populates="events"
+ 
+    map_associations: Mapped[list["MapEventAssociation"]] = relationship( # type: ignore
+        "MapEventAssociation", back_populates="event"
     )
-    areas = relationship(
-        "MapArea",  # <- 注意這裡是字串
-        secondary="map_area_event_association",
-        back_populates="events"
+ 
+    area_associations: Mapped[list["MapAreaEventAssociation"]] = relationship( # type: ignore
+        "MapAreaEventAssociation", back_populates="event"
     )
     # typing
     general_logic: Mapped[Optional["GeneralEventLogic"]] = relationship(
