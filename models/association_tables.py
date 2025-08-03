@@ -4,6 +4,7 @@ from sqlalchemy.orm import relationship, Mapped, mapped_column
 from core_system.models.database import Base
 if TYPE_CHECKING:
     from core_system.models.maps import Map
+    from core_system.models.event import Event
 
 
 class MapEventAssociation(Base):
