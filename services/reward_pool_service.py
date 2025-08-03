@@ -10,16 +10,14 @@ from core_system.models.items import RewardPoolItem
 def add_reward_pool(db: Session, name: str):
     new_pool = RewardPool(name=name)
     db.add(new_pool)
-    db.commit()
-    db.refresh(new_pool)
+    db.flush()
     return new_pool.id
 
 
 def remove_reward_pool(db: Session, pool_id: int):
     remove_pool = db.query(RewardPool).filter(RewardPool.id == pool_id).first()
     if remove_pool:
-        db.delete(remove_pool)  # 這裡會啟動 cascade
-        db.commit()
+        db.delete(remove_pool)
     return
 
 
@@ -30,19 +28,16 @@ def add_reward_pool_item(db: Session, pool_id: int, item_id: int, probability: f
         probability=probability
     )
     db.add(reward_pool_item)
-    db.commit()
     return
 
 
 def remove_reward_pool_item(db: Session, pool_id: int, item_id: int):
     remove_pool_item = db.query(RewardPoolItem).filter(RewardPoolItem.pool_id == pool_id and RewardPoolItem.item_id==item_id).first()
     db.delete(remove_pool_item)
-    db.commit()
     return
 
 
 def edit_reward_pool_item(db: Session, pool_id: int, item_id: int,probability:float):
     remove_pool_item = db.query(RewardPoolItem).filter(RewardPoolItem.pool_id == pool_id and RewardPoolItem.item_id==item_id).first()
     remove_pool_item.probability = probability
-    db.commit()
     return

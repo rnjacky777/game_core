@@ -28,17 +28,18 @@ class Event(Base):
     # "battle", "normal", "special"
     type: Mapped[str] = mapped_column(String(50))
     description: Mapped[str] = mapped_column(Text)
- 
-    map_associations: Mapped[list["MapEventAssociation"]] = relationship( # type: ignore
-        "MapEventAssociation", back_populates="event"
+
+    map_associations: Mapped[list["MapEventAssociation"]] = relationship(  # type: ignore
+        "MapEventAssociation", back_populates="event", cascade="all, delete-orphan"
     )
- 
-    area_associations: Mapped[list["MapAreaEventAssociation"]] = relationship( # type: ignore
-        "MapAreaEventAssociation", back_populates="event"
+
+    area_associations: Mapped[list["MapAreaEventAssociation"]] = relationship(  # type: ignore
+        "MapAreaEventAssociation", back_populates="event", cascade="all, delete-orphan"
     )
     # typing
     general_logic: Mapped[Optional["GeneralEventLogic"]] = relationship(
-        "GeneralEventLogic", back_populates="event", uselist=False
+        "GeneralEventLogic", back_populates="event", uselist=False,
+        cascade="all, delete-orphan"
     )
     # 其他欄位如事件劇情、條件、結果等在這邊擴充
 
@@ -110,7 +111,8 @@ class RewardPool(Base):
 class GeneralEventLogic(Base):
     __tablename__ = 'general_event_logic'
     id = Column(Integer, primary_key=True)
-    event_id = Column(Integer, ForeignKey('events.id'), unique=True)
+    event_id = Column(Integer, ForeignKey(
+        'events.id', ondelete="CASCADE"), unique=True)
     story_text = Column(Text, default="[]")  # 可為 JSON 字串，支援多段落
     # TODO 未來補上 儲存條件，例如 {"has_item": "torch"}
 
