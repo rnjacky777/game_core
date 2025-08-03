@@ -2,7 +2,6 @@ from dataclasses import dataclass
 from typing import List, Literal, Optional, Tuple
 
 from sqlalchemy.orm import Session, selectinload
-from sqlalchemy.exc import IntegrityError
 
 from core_system.models.event import Event
 from core_system.models.maps import Map
@@ -51,13 +50,6 @@ def patch_map_basic_service(
     if image_url is not None:
         map_obj.image_url = image_url
 
-    try:
-        db.commit()
-    except IntegrityError as e:
-        db.rollback()
-        raise RuntimeError("Failed to update map basic attributes") from e
-
-    db.refresh(map_obj)
     return map_obj
 
 
@@ -125,13 +117,7 @@ def update_map_event_associations(
             for a in assocs:
                 a.probability = a.probability / total
 
-    try:
-        db.commit()
-    except IntegrityError as e:
-        db.rollback()
-        raise RuntimeError("Failed to update event associations") from e
-
-    db.refresh(map_obj)
+    db.flush()
 
     return [
         EventAssociationDTO(
@@ -210,28 +196,20 @@ def get_map_by_id(db: Session, map_id: int) -> Optional[Map]:
 def create_maps_service(
     db: Session,
     map_datas: List[CreateMapData],
-    commit: bool = True,
 ) -> List[CreatedMapInfoDTO]:
     """
     批量建立地圖，回傳已建立的簡要資訊。
     """
     created: List[CreatedMapInfoDTO] = []
-    try:
-        for md in map_datas:
-            new_map = Map(
-                name=md.name,
-                description=md.description,
-                image_url=getattr(md, "image_url", None),
-            )
-            db.add(new_map)
-            db.flush()  # 取得 new_map.id
-            created.append(CreatedMapInfoDTO(id=new_map.id, name=new_map.name))
-
-        if commit:
-            db.commit()
-    except IntegrityError:
-        db.rollback()
-        raise
+    for md in map_datas:
+        new_map = Map(
+            name=md.name,
+            description=md.description,
+            image_url=getattr(md, "image_url", None),
+        )
+        db.add(new_map)
+        db.flush()  # 取得 new_map.id
+        created.append(CreatedMapInfoDTO(id=new_map.id, name=new_map.name))
     return created
 
 
@@ -243,7 +221,6 @@ def delete_map_service(db: Session, map_id: int) -> bool:
     if not map_to_delete:
         return False
     db.delete(map_to_delete)
-    db.commit()
     return True
 
 
@@ -329,11 +306,4 @@ def patch_map_connections_service(
             if neighbor:
                 remove_connection(db, map_obj, neighbor)
 
-    try:
-        db.commit()
-    except IntegrityError as e:
-        db.rollback()
-        raise RuntimeError("Failed to update connections") from e
-
-    db.refresh(map_obj)
     return map_obj

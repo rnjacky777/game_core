@@ -1,26 +1,17 @@
 import logging
-from datetime import datetime
-from typing import List, Optional, Union
+from typing import List, Optional
 
 from fastapi import HTTPException
-from sqlalchemy import and_, func, or_, select
+from sqlalchemy import  select
 from sqlalchemy.orm import Session, selectinload
 
 from core_system.models.association_tables import MapAreaEventAssociation, MapEventAssociation
-# from core_system.models.event import (Event, EventResult, GeneralEventLogic,
-#                                       StoryTextData, UserEventInstance)
+
 from core_system.models.event import (Event, EventResult, GeneralEventLogic,
                                       StoryTextData)
-from core_system.models.maps import Map, MapArea, UserMapProgress
-from core_system.models.user import User, UserData
-# from schemas.event import (CharacterStateChange, DrawEventRequest,
-#                            DrawEventResponse)
 
 # NOTE: The MonsterPoolEntry model might need adjustment for the logic in draw_current_map_event
-from core_system.models.monsters import MonsterPoolEntry
 from core_system.utils.random_utils import weighted_choice
-# from util.random_utils import weighted_choice
-# from .condition_service import check_conditions # 您可以取消註解此行來使用條件檢查
 
 # region event service
 def fetch_events(
