@@ -1,5 +1,6 @@
 
 
+import logging
 from fastapi import HTTPException
 from sqlalchemy.orm import Session
 from typing import Optional
@@ -38,6 +39,10 @@ def remove_reward_pool_item(db: Session, pool_id: int, item_id: int):
 
 
 def edit_reward_pool_item(db: Session, pool_id: int, item_id: int,probability:float):
-    remove_pool_item = db.query(RewardPoolItem).filter(RewardPoolItem.pool_id == pool_id and RewardPoolItem.item_id==item_id).first()
+    remove_pool_item = (
+    db.query(RewardPoolItem)
+    .filter_by(pool_id=pool_id, item_id=item_id)
+    .first()
+)
     remove_pool_item.probability = probability
     return
