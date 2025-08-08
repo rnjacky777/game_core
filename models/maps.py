@@ -8,7 +8,6 @@ from core_system.models.user import UserData
 from core_system.models.association_tables import MapConnection, MapEventAssociation, MapAreaEventAssociation
 # 多地圖連結
 if TYPE_CHECKING:
-
     # The following are defined later in this file, but this helps type checkers
     from . import MapArea, UserMapProgress
 
