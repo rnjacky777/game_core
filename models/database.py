@@ -4,7 +4,7 @@ from sqlalchemy import create_engine, text
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker,DeclarativeBase
 
-DATABASE_URL = os.getenv("DATABASE_URL", "sqlite:///./default.db")
+DATABASE_URL = os.getenv("DATABASE_URL", "sqlite:////db/game_data.db")
 
 engine = create_engine(DATABASE_URL, connect_args={"check_same_thread": False})
 
