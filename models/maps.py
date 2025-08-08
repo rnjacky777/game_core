@@ -5,9 +5,10 @@ from sqlalchemy import (JSON, Column, ForeignKey, Integer, String, Table, Text)
 from sqlalchemy.orm import relationship, Mapped, mapped_column
 from core_system.models.database import Base
 from core_system.models.user import UserData
+from core_system.models.association_tables import MapConnection, MapEventAssociation, MapAreaEventAssociation
 # 多地圖連結
 if TYPE_CHECKING:
-    from .association_tables import MapConnection, MapEventAssociation
+
     # The following are defined later in this file, but this helps type checkers
     from . import MapArea, UserMapProgress
 
@@ -20,7 +21,7 @@ class Map(Base):
     image_url: Mapped[str] = mapped_column(String(255), nullable=True)
 
     # 透過關聯物件與 Event 建立關聯
-    event_associations: Mapped[list["MapEventAssociation"]] = relationship(
+    event_associations: Mapped[list['MapEventAssociation']] = relationship(
         "MapEventAssociation", back_populates="map", cascade="all, delete-orphan"
     )
 
