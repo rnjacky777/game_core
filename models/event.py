@@ -8,6 +8,8 @@ from core_system.models.database import Base
 
 if TYPE_CHECKING:
     from core_system.models import RewardPoolItem
+    from association_tables import MapEventAssociation, MapAreaEventAssociation
+
 
 
 '''
@@ -29,11 +31,11 @@ class Event(Base):
     type: Mapped[str] = mapped_column(String(50))
     description: Mapped[str] = mapped_column(Text)
 
-    map_associations: Mapped[list["MapEventAssociation"]] = relationship(  # type: ignore
+    map_associations: Mapped[list["MapEventAssociation"]] = relationship(
         "MapEventAssociation", back_populates="event", cascade="all, delete-orphan"
     )
 
-    area_associations: Mapped[list["MapAreaEventAssociation"]] = relationship(  # type: ignore
+    area_associations: Mapped[list["MapAreaEventAssociation"]] = relationship( 
         "MapAreaEventAssociation", back_populates="event", cascade="all, delete-orphan"
     )
     # typing
