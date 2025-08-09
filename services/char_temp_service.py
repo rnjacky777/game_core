@@ -1,4 +1,5 @@
-from typing import List, Optional
+import logging
+from typing import List, Literal, Optional
 from sqlalchemy.orm import Session
 from core_system.models import CharTemp
 from schemas.char_temp import CharTempCreate, CharTempUpdate
@@ -16,12 +17,39 @@ def create_char_temp(db: Session, char_data: CharTempCreate) -> CharTemp:
     return char
 
 
-def get_all_char_temps(db: Session, skip: int = 0, limit: int = 100) -> List[CharTemp]:
+def fetch_char_temps(
+    db: Session,
+    started_id: Optional[int],
+    limit: int,
+    direction: Literal["next", "prev"] = "next",
+) -> List[CharTemp]:
     """
-    使用分頁檢索角色模板列表。
+    使用基於 cursor 的分頁來獲取角色模板列表。
     """
-    return db.query(CharTemp).offset(skip).limit(limit).all()
+    logging.debug(f"Fetching char temps: cursor={started_id}, limit={limit}, direction='{direction}'")
+    query = db.query(CharTemp)
 
+    if started_id is not None:
+        if direction == "next":
+            query = query.filter(CharTemp.id > started_id)
+            query = query.order_by(CharTemp.id.asc())
+        else:  # direction == "prev"
+            query = query.filter(CharTemp.id < started_id)
+            query = query.order_by(CharTemp.id.desc())
+    else:
+        query = query.order_by(CharTemp.id.asc())
+
+    results = query.limit(limit).all()
+
+    if direction == "prev":
+        results.reverse()
+
+    if results:
+        logging.debug(f"Found {len(results)} character templates.")
+    else:
+        logging.debug("No character templates found for the given criteria.")
+
+    return results
 
 def get_char_temp(db: Session, char_id: int) -> Optional[CharTemp]:
     """
