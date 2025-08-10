@@ -22,13 +22,26 @@ def fetch_char_temps(
     started_id: Optional[int],
     limit: int,
     direction: Literal["next", "prev"] = "next",
+    id: Optional[int] = None,
+    name: Optional[str] = None,
 ) -> List[CharTemp]:
     """
-    使用基於 cursor 的分頁來獲取角色模板列表。
+    使用基於 cursor 的分頁來獲取角色模板列表，支援 id 精確搜尋及 name 模糊搜尋。
     """
-    logging.debug(f"Fetching char temps: cursor={started_id}, limit={limit}, direction='{direction}'")
+    logging.debug(f"Fetching char temps: id={id}, name={name}, cursor={started_id}, limit={limit}, direction='{direction}'")
     query = db.query(CharTemp)
 
+    # 若有指定 id，直接精確搜尋，不用分頁或模糊搜尋
+    if id is not None:
+        query = query.filter(CharTemp.id == id).order_by(CharTemp.id.asc())
+        results = query.limit(limit).all()
+        return results
+
+    # 沒有 id，依 name 篩選（若有）
+    if name:
+        query = query.filter(CharTemp.name.ilike(f"%{name}%"))
+
+    # 分頁條件
     if started_id is not None:
         if direction == "next":
             query = query.filter(CharTemp.id > started_id)
@@ -87,3 +100,4 @@ def delete_char_temp(db: Session, char_id: int) -> Optional[CharTemp]:
         return None
     db.delete(char)
     return char
+
