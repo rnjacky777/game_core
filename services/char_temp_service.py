@@ -1,19 +1,27 @@
 import logging
 from typing import List, Literal, Optional
+
 from sqlalchemy.orm import Session
+
 from core_system.models import CharTemp
-from schemas.char_temp import CharTempCreate, CharTempUpdate
+from schemas.char_temp import CharTempCreate
 
 
 def create_char_temp(db: Session, char_data: CharTempCreate) -> CharTemp:
     """
     建立一個新的角色模板實例並將其加入到 session 中。
+
     此函式不會提交 transaction。
+
+    Args:
+        db (Session): 資料庫 session。
+        char_data (CharTempCreate): 包含新角色模板資料的 Pydantic schema。
+
+    Returns:
+        CharTemp: 新建立的 SQLAlchemy CharTemp 物件。
     """
     char = CharTemp(**char_data.model_dump())
     db.add(char)
-    db.flush()
-    db.refresh(char)
     return char
 
 
@@ -26,7 +34,21 @@ def fetch_char_temps(
     name: Optional[str] = None,
 ) -> List[CharTemp]:
     """
-    使用基於 cursor 的分頁來獲取角色模板列表，支援 id 精確搜尋及 name 模糊搜尋。
+    獲取角色模板列表，支援 ID 精確搜尋、名稱模糊搜尋以及 cursor-based 分頁。
+
+    篩選條件的優先級為：ID 精確搜尋 > 名稱模糊搜尋。
+    分頁邏輯僅在非 ID 精確搜尋時生效。
+
+    Args:
+        db (Session): 資料庫 session。
+        started_id (Optional[int]): 分頁的起始 cursor ID。
+        limit (int): 要獲取的最大項目數量。
+        direction (Literal["next", "prev"]): 分頁方向。
+        id (Optional[int]): 用於精確搜尋的角色模板 ID。
+        name (Optional[str]): 用於模糊搜尋的角色模板名稱。
+
+    Returns:
+        List[CharTemp]: 符合條件的角色模板物件列表，一律以 ID 升序排列。
     """
     logging.debug(f"Fetching char temps: id={id}, name={name}, cursor={started_id}, limit={limit}, direction='{direction}'")
     query = db.query(CharTemp)
@@ -66,38 +88,33 @@ def fetch_char_temps(
 
 def get_char_temp(db: Session, char_id: int) -> Optional[CharTemp]:
     """
-    透過 ID 檢索單一角色模板。
-    為了效率，使用 db.get()。
+    透過 ID 高效率地檢索單一角色模板。
+
+    Args:
+        db (Session): 資料庫 session。
+        char_id (int): 要檢索的角色模板 ID。
+
+    Returns:
+        Optional[CharTemp]: 找到的 CharTemp 物件，若不存在則回傳 None。
     """
     return db.get(CharTemp, char_id)
-
-
-def update_char_temp(db: Session, char_id: int, char_data: CharTempUpdate) -> Optional[CharTemp]:
-    """
-    使用新資料更新現有的角色模板。
-    只更新輸入資料中明確設定的欄位。
-    """
-    char = db.get(CharTemp, char_id)
-    if not char:
-        return None
-
-    update_data = char_data.model_dump(exclude_unset=True)
-
-    for key, value in update_data.items():
-        setattr(char, key, value)
-
-    db.add(char)
-    return char
 
 
 def delete_char_temp(db: Session, char_id: int) -> Optional[CharTemp]:
     """
     透過 ID 刪除一個角色模板。
-    將物件標記為刪除，但不提交 transaction。
+
+    此函式僅將物件標記為刪除，並不會提交 transaction。
+
+    Args:
+        db (Session): 資料庫 session。
+        char_id (int): 要刪除的角色模板 ID。
+
+    Returns:
+        Optional[CharTemp]: 被標記為刪除的 CharTemp 物件，若不存在則回傳 None。
     """
     char = db.get(CharTemp, char_id)
     if not char:
         return None
     db.delete(char)
     return char
-
