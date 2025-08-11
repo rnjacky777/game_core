@@ -1,8 +1,9 @@
 from __future__ import annotations
 import os
 from sqlalchemy import create_engine, text
-from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker,DeclarativeBase
+from dotenv import load_dotenv
+load_dotenv()
 
 DATABASE_URL = os.getenv("DATABASE_URL", "sqlite:////db/game_data.db")
 
