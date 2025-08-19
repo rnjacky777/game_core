@@ -8,8 +8,9 @@ from core_system.models.user import UserData
 from core_system.models.association_tables import MapConnection, MapEventAssociation, MapAreaEventAssociation
 # 多地圖連結
 # if TYPE_CHECKING:
-    # The following are defined later in this file, but this helps type checkers
-    # from . import MapArea, UserMapProgress
+# The following are defined later in this file, but this helps type checkers
+# from . import MapArea, UserMapProgress
+
 
 class Map(Base):
     __tablename__ = "maps"
@@ -32,7 +33,8 @@ class Map(Base):
 
     # 小地圖
     areas: Mapped[list["MapArea"]] = relationship(
-        "MapArea", back_populates="map"
+        "MapArea", back_populates="map",
+        cascade="all, delete-orphan"
     )
 
     # 與 MapConnection 的雙向關聯（無方向連線）
@@ -92,7 +94,8 @@ class UserMapProgress(Base):
     is_completed: Mapped[bool] = mapped_column(default=False)
 
     # 關聯
-    user_data: Mapped["UserData"] = relationship(back_populates="map_progresses")
+    user_data: Mapped["UserData"] = relationship(
+        back_populates="map_progresses")
     map: Mapped["Map"] = relationship("Map", back_populates="user_progresses")
 
 
@@ -108,7 +111,7 @@ class MapArea(Base):
     # 關聯 Map 和 Event
     map = relationship("Map", back_populates="areas")
     # 透過關聯物件與 Event 建立關聯
-    event_associations: Mapped[list["MapAreaEventAssociation"]] = relationship( # type: ignore
+    event_associations: Mapped[list["MapAreaEventAssociation"]] = relationship(  # type: ignore
         "MapAreaEventAssociation", back_populates="area", cascade="all, delete-orphan"
     )
 
