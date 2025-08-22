@@ -2,14 +2,25 @@ from dataclasses import dataclass
 import logging
 from typing import List, Optional, Tuple, Literal
 
+
 from sqlalchemy.orm import Session, selectinload
 
 from core_system.models.event import Event
 from core_system.models.maps import Map
 from core_system.models.association_tables import MapConnection, MapEventAssociation
-from schemas.map import CreateMapData
+# from schemas.map import CreateMapData
+
+# Fix it
+from pydantic import BaseModel, Field
+class CreateMapData(BaseModel):
+    name: str = Field(..., max_length=100, description="要建立的地圖名稱")
+    description: Optional[str] = Field(None, description="地圖敘述")
+    image_url: Optional[str] = Field(None, description="地圖圖片 URL")
 
 
+class CreateMapRequest(BaseModel):
+    map_datas: List[CreateMapData] = Field(..., description="批量新增的地圖資料列表")
+#######
 @dataclass
 class EventAssociationDTO:
     event_id: int
