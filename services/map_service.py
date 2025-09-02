@@ -7,7 +7,13 @@ from sqlalchemy.orm import Session, selectinload
 from core_system.models.event import Event
 from core_system.models.maps import Map
 from core_system.models.association_tables import MapConnection, MapEventAssociation
-from schemas.map import CreateMapData
+
+
+@dataclass
+class CreateMapDTO:
+    name: str
+    description: str | None
+    image_url: str | None
 
 
 @dataclass
@@ -136,7 +142,8 @@ def fetch_maps(
     Returns:
         List[Map]: 符合條件的地圖列表，ID 升序排列（除非 prev 頁，會反轉）。
     """
-    logging.debug(f"Fetching maps: id={id}, name={name}, cursor={started_id}, limit={limit}, direction='{direction}'")
+    logging.debug(
+        f"Fetching maps: id={id}, name={name}, cursor={started_id}, limit={limit}, direction='{direction}'")
     query = db.query(Map)
 
     # 若指定 id，直接精確搜尋，不用分頁或模糊搜尋
@@ -177,7 +184,8 @@ def get_map_by_id(db: Session, map_id: int) -> Optional[Map]:
     return (
         db.query(Map)
         .options(
-            selectinload(Map.event_associations).selectinload(MapEventAssociation.event),
+            selectinload(Map.event_associations).selectinload(
+                MapEventAssociation.event),
             selectinload(Map.connections_a).selectinload(MapConnection.map_b),
             selectinload(Map.connections_b).selectinload(MapConnection.map_a),
         )
@@ -188,7 +196,7 @@ def get_map_by_id(db: Session, map_id: int) -> Optional[Map]:
 
 def create_maps_service(
     db: Session,
-    map_datas: List[CreateMapData],
+    map_datas: List[CreateMapDTO],
 ) -> List[CreatedMapInfoDTO]:
     created: List[CreatedMapInfoDTO] = []
     for md in map_datas:
@@ -221,7 +229,8 @@ def upsert_connection(
     neighbor: Map,
     **kwargs,
 ) -> MapConnection:
-    a, b = (map_obj, neighbor) if map_obj.id < neighbor.id else (neighbor, map_obj)
+    a, b = (map_obj, neighbor) if map_obj.id < neighbor.id else (
+        neighbor, map_obj)
     conn = (
         session.query(MapConnection)
         .filter_by(map_a_id=a.id, map_b_id=b.id)
@@ -264,7 +273,8 @@ def patch_map_connections_service(
                 continue
             neighbor = db.get(Map, neighbor_id)
             if not neighbor:
-                raise ValueError(f"Neighbor map id {neighbor_id} does not exist")
+                raise ValueError(
+                    f"Neighbor map id {neighbor_id} does not exist")
             upsert_connection(
                 db,
                 map_obj,
