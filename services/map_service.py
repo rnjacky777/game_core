@@ -1,4 +1,5 @@
 from dataclasses import dataclass
+import logging
 from typing import List, Optional, Tuple, Literal
 
 from sqlalchemy.orm import Session, selectinload
@@ -112,33 +113,64 @@ def update_map_event_associations(
 
 def fetch_maps(
     db: Session,
-    cursor_id: Optional[int],
+    started_id: Optional[int],
     limit: int,
     direction: Literal["next", "prev"] = "next",
-) -> Tuple[List[Map], Optional[int], Optional[int], bool]:
+    id: Optional[int] = None,
+    name: Optional[str] = None,
+) -> List[Map]:
+    """
+    獲取地圖列表，支援 ID 精確搜尋、名稱模糊搜尋以及 cursor-based 分頁。
+
+    篩選條件優先級為：ID 精確搜尋 > 名稱模糊搜尋。
+    分頁邏輯僅在非 ID 精確搜尋時生效。
+
+    Args:
+        db (Session): 資料庫 session。
+        started_id (Optional[int]): 分頁起始 cursor ID。
+        limit (int): 最大取用數量。
+        direction (Literal["next", "prev"]): 分頁方向。
+        id (Optional[int]): 精確搜尋的地圖 ID。
+        name (Optional[str]): 模糊搜尋的地圖名稱。
+
+    Returns:
+        List[Map]: 符合條件的地圖列表，ID 升序排列（除非 prev 頁，會反轉）。
+    """
+    logging.debug(f"Fetching maps: id={id}, name={name}, cursor={started_id}, limit={limit}, direction='{direction}'")
     query = db.query(Map)
 
-    if direction == "next":
-        if cursor_id is not None:
-            query = query.filter(Map.id > cursor_id)
-        query = query.order_by(Map.id.asc())
-    else:
-        if cursor_id is not None:
-            query = query.filter(Map.id < cursor_id)
-        query = query.order_by(Map.id.desc())
+    # 若指定 id，直接精確搜尋，不用分頁或模糊搜尋
+    if id is not None:
+        query = query.filter(Map.id == id).order_by(Map.id.asc())
+        results = query.limit(limit).all()
+        return results
 
-    results = query.limit(limit + 1).all()
-    has_more = len(results) > limit
-    if has_more:
-        results = results[:limit]
+    # 沒有 id，依 name 篩選（若有）
+    if name:
+        query = query.filter(Map.name.ilike(f"%{name}%"))
+
+    # 分頁條件
+    if started_id is not None:
+        if direction == "next":
+            query = query.filter(Map.id > started_id)
+            query = query.order_by(Map.id.asc())
+        else:  # direction == "prev"
+            query = query.filter(Map.id < started_id)
+            query = query.order_by(Map.id.desc())
+    else:
+        query = query.order_by(Map.id.asc())
+
+    results = query.limit(limit).all()
 
     if direction == "prev":
-        results = list(reversed(results))
+        results.reverse()
 
-    next_cursor = results[-1].id if results else None
-    prev_cursor = results[0].id if results else None
+    if results:
+        logging.debug(f"Found {len(results)} maps.")
+    else:
+        logging.debug("No maps found for the given criteria.")
 
-    return results, next_cursor, prev_cursor, has_more
+    return results
 
 
 def get_map_by_id(db: Session, map_id: int) -> Optional[Map]:

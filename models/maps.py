@@ -1,15 +1,16 @@
 # app/models/map.py
 
 from typing import TYPE_CHECKING
-from sqlalchemy import (JSON, Column, ForeignKey, Integer, String, Table, Text)
+from sqlalchemy import (JSON, Column, ForeignKey, Integer, String, Text)
 from sqlalchemy.orm import relationship, Mapped, mapped_column
 from core_system.models.database import Base
 from core_system.models.user import UserData
 from core_system.models.association_tables import MapConnection, MapEventAssociation, MapAreaEventAssociation
 # 多地圖連結
-if TYPE_CHECKING:
-    # The following are defined later in this file, but this helps type checkers
-    from . import MapArea, UserMapProgress
+# if TYPE_CHECKING:
+# The following are defined later in this file, but this helps type checkers
+# from . import MapArea, UserMapProgress
+
 
 class Map(Base):
     __tablename__ = "maps"
@@ -32,10 +33,24 @@ class Map(Base):
 
     # 小地圖
     areas: Mapped[list["MapArea"]] = relationship(
-        "MapArea", back_populates="map"
+        "MapArea", back_populates="map",
+        cascade="all, delete-orphan"
     )
 
     # 與 MapConnection 的雙向關聯（無方向連線）
+    # MapConnection 只存兩個欄位 map_a_id 與 map_b_id，並用 map_a_id < map_b_id 的規則避免重複連線。
+
+    # 一個地圖可能在連線中是 A 端 或 B 端，所以 ORM 需要兩個 relationship：
+
+    # connections_a → 這個地圖是 A 端的連線
+
+    # connections_b → 這個地圖是 B 端的連線
+
+    # 這樣可以保證：
+
+    # 資料庫只存一筆連線，避免 (A,B) 與 (B,A) 重複
+
+    # ORM 仍能完整抓到所有連線
     connections_a: Mapped[list["MapConnection"]] = relationship(
         "MapConnection",
         foreign_keys="[MapConnection.map_a_id]",
@@ -79,7 +94,8 @@ class UserMapProgress(Base):
     is_completed: Mapped[bool] = mapped_column(default=False)
 
     # 關聯
-    user_data: Mapped["UserData"] = relationship(back_populates="map_progresses")
+    user_data: Mapped["UserData"] = relationship(
+        back_populates="map_progresses")
     map: Mapped["Map"] = relationship("Map", back_populates="user_progresses")
 
 
@@ -95,7 +111,7 @@ class MapArea(Base):
     # 關聯 Map 和 Event
     map = relationship("Map", back_populates="areas")
     # 透過關聯物件與 Event 建立關聯
-    event_associations: Mapped[list["MapAreaEventAssociation"]] = relationship( # type: ignore
+    event_associations: Mapped[list["MapAreaEventAssociation"]] = relationship(  # type: ignore
         "MapAreaEventAssociation", back_populates="area", cascade="all, delete-orphan"
     )
 
